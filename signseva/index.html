@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIGNSEVA - AI-Powered Assistive Communication System</title>
+  <meta name="description" content="AI Sign Language Recognition, Two-Way Speech/Text Communication & Emergency SOS for Deaf and Speech-Impaired Individuals. Built by Team CodeCure, Hindusthan Institute of Technology for SEVA Hackathon.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google MediaPipe Hands & Camera Utils -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-blue-600 selection:text-white">
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+      
+      <!-- Brand & Badges -->
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-2xl shadow-lg shadow-blue-500/20">
+          🤟
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-1.5" data-i18n="appTitle">
+              SIGNSEVA
+            </h1>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-blue-500/20 text-blue-400 border border-blue-500/30 hidden sm:inline-block" data-i18n="themeBadge">
+              Swasth & Samavesh Bharat
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 flex items-center gap-2">
+            <span data-i18n="appSubtitle">AI-Powered Assistive Communication System</span>
+            <span class="text-slate-600 hidden md:inline">•</span>
+            <span class="text-cyan-400 font-medium hidden md:inline" data-i18n="teamBadge">Team CodeCure | HIT</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Controls: Language & Accessibility -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Language Selector -->
+        <div class="relative">
+          <label for="language-selector" class="sr-only">Select Language</label>
+          <select id="language-selector" aria-label="Select Interface and Voice Language" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs sm:text-sm font-semibold rounded-xl px-3 py-2 pr-8 focus:outline-none focus:border-blue-500 cursor-pointer appearance-none">
+            <option value="en">🇬🇧 English</option>
+            <option value="hi">🇮🇳 हिंदी (Hindi)</option>
+            <option value="ta">🇮🇳 தமிழ் (Tamil)</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400 text-xs" aria-hidden="true">▼</div>
+        </div>
+
+        <!-- High Contrast Mode Toggle -->
+        <button id="toggle-high-contrast" aria-pressed="false" aria-label="Toggle High Contrast Display Mode" class="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition" title="Toggle High Contrast">
+          <span class="text-sm" aria-hidden="true">👁️</span>
+          <span class="hidden lg:inline" data-i18n="highContrast">High Contrast</span>
+        </button>
+
+        <!-- Large Text Toggle -->
+        <button id="toggle-large-text" aria-pressed="false" aria-label="Toggle Large Font Size for Accessibility" class="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition" title="Toggle Large Text Size">
+          <span class="font-bold font-mono text-sm" aria-hidden="true">A+</span>
+          <span class="hidden lg:inline" data-i18n="largeText">Large Text</span>
+        </button>
+
+        <!-- Direct Emergency Red Button -->
+        <button onclick="window.switchTab('tab-emergency')" aria-label="Trigger Emergency SOS Protocol" class="bg-red-600 hover:bg-red-500 text-white font-bold px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-red-600/30 transition animate-pulse">
+          <span aria-hidden="true">🚨</span>
+          <span class="font-extrabold">SOS</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- MAIN NAVIGATION TABS -->
+    <nav aria-label="Main Application Navigation" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/80 flex overflow-x-auto no-scrollbar gap-1 py-1.5" role="tablist">
+      <button id="tab-btn-sign-ai" onclick="window.switchTab('tab-sign-ai')" role="tab" aria-selected="true" aria-controls="tab-sign-ai" data-tab="tab-sign-ai" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition bg-blue-600 text-white shadow-md flex-shrink-0">
+        <span aria-hidden="true">🤖</span>
+        <span data-i18n="tabSignAI">AI Sign Recognition</span>
+      </button>
+
+      <button id="tab-btn-two-way" onclick="window.switchTab('tab-two-way')" role="tab" aria-selected="false" aria-controls="tab-two-way" data-tab="tab-two-way" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800 flex-shrink-0">
+        <span aria-hidden="true">💬</span>
+        <span data-i18n="tabTwoWay">Two-Way Speech/Text</span>
+      </button>
+
+      <button id="tab-btn-visual-guide" onclick="window.switchTab('tab-visual-guide')" role="tab" aria-selected="false" aria-controls="tab-visual-guide" data-tab="tab-visual-guide" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800 flex-shrink-0">
+        <span aria-hidden="true">📖</span>
+        <span data-i18n="tabVisualGuide">Visual Sign Guide</span>
+      </button>
+
+      <button id="tab-btn-emergency" onclick="window.switchTab('tab-emergency')" role="tab" aria-selected="false" aria-controls="tab-emergency" data-tab="tab-emergency" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800 flex-shrink-0">
+        <span aria-hidden="true">🚨</span>
+        <span data-i18n="tabEmergency">Emergency SOS</span>
+      </button>
+
+      <button id="tab-btn-scenarios" onclick="window.switchTab('tab-scenarios')" role="tab" aria-selected="false" aria-controls="tab-scenarios" data-tab="tab-scenarios" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800 flex-shrink-0">
+        <span aria-hidden="true">🏢</span>
+        <span data-i18n="tabScenarios">Sector Scenarios</span>
+      </button>
+
+      <button id="tab-btn-team" onclick="window.switchTab('tab-team')" role="tab" aria-selected="false" aria-controls="tab-team" data-tab="tab-team" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800 flex-shrink-0">
+        <span aria-hidden="true">🏆</span>
+        <span data-i18n="tabTeam">Project Info</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- TAB 1: AI SIGN LANGUAGE RECOGNITION -->
+    <section id="tab-sign-ai" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-sign-ai" class="tab-panel space-y-6">
+      
+      <!-- Banner / Instructions -->
+      <div class="bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-slate-900 border border-blue-800/40 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl flex-shrink-0" aria-hidden="true">
+            📷
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-white">Camera-Based Hand Gesture AI Recognition</h2>
+            <p class="text-xs sm:text-sm text-slate-300" data-i18n="cameraTip">
+              Position your hand clearly within the camera frame. Ensure good lighting.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <button id="btn-camera-toggle" class="flex-1 md:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <span data-i18n="cameraStart">Start Camera</span>
+          </button>
+          
+          <button id="btn-camera-flip" aria-label="Switch Camera Facing Direction" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" title="Flip Camera Front/Back">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Video Feed & Live Landmark Canvas + Detection Box Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Video Canvas Box (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-4">
+          <div class="camera-container border-2 border-slate-800 shadow-2xl relative">
+            <video id="webcam-video" playsinline muted autoplay aria-label="Live Camera Hand Tracking Video"></video>
+            <canvas id="webcam-canvas" width="640" height="480" aria-label="Hand Landmark Detection Skeleton"></canvas>
+            
+            <!-- Inactive Overlay -->
+            <div id="camera-idle-placeholder" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950/80 backdrop-blur-sm pointer-events-none transition-opacity">
+              <div class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-3xl mb-3 shadow-inner" aria-hidden="true">
+                🖐️
+              </div>
+              <h3 class="text-lg font-bold text-slate-200">Camera Feed Inactive</h3>
+              <p class="text-xs text-slate-400 max-w-sm mt-1">
+                Click "Start Camera" above to enable live hand tracking, or try the interactive gesture simulator below!
+              </p>
+            </div>
+          </div>
+
+          <!-- Auto-Speak toggle & options -->
+          <div class="flex items-center justify-between px-2 text-xs text-slate-400">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="toggle-auto-speak" checked aria-label="Auto-Speak Recognized Gesture via Speech Synthesizer" class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-0">
+              <span class="text-slate-300 font-medium">Auto-Speak Recognized Gesture (TTS)</span>
+            </label>
+            <span class="font-mono text-cyan-400">21 Hand Landmarks Model (MediaPipe)</span>
+          </div>
+        </div>
+
+        <!-- Detection & Output Console (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-5">
+          
+          <!-- Live Gesture Result Card -->
+          <div class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl flex-1 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400" data-i18n="detectedGesture">
+                  Detected Gesture
+                </span>
+                <span id="gesture-confidence-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700" aria-live="polite">
+                  Ready
+                </span>
+              </div>
+
+              <!-- Main Gesture Visual Box -->
+              <div class="flex items-center gap-4 bg-slate-900/90 rounded-2xl p-4 border border-slate-800/80 mb-4">
+                <div id="gesture-icon-badge" class="w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-3xl flex-shrink-0" aria-hidden="true">
+                  🖐️
+                </div>
+                <div>
+                  <h3 id="detected-gesture-text" class="text-xl sm:text-2xl font-black text-white" aria-live="polite" aria-atomic="true">
+                    Waiting for hand...
+                  </h3>
+                  <p id="gesture-desc-text" class="text-xs text-slate-400 mt-1">
+                    Show hand to camera or click simulator.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Quick Action Buttons for recognized sign -->
+              <div class="grid grid-cols-2 gap-2 mb-4">
+                <button onclick="window.gestureRecognizer.speakCurrentGesture()" aria-label="Speak Recognized Sign Out Loud" class="bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                  <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                  <span data-i18n="speakAloud">Speak Out Loud</span>
+                </button>
+                <button id="btn-add-gesture" disabled aria-label="Add Recognized Sign to Sentence Message" class="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:pointer-events-none text-white py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  <span data-i18n="addToMessage">Add to Sentence</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Sentence Composer Box -->
+            <div class="pt-4 border-t border-slate-800">
+              <label for="composed-message-input" class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2" data-i18n="composedSentence">
+                Composed Message
+              </label>
+              <textarea id="composed-message-input" rows="3" aria-label="Composed sentence text" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500 resize-none font-medium" placeholder="Detected signs or typed words can be combined here into a complete sentence..."></textarea>
+              
+              <div class="flex items-center justify-end gap-2 mt-2">
+                <button id="btn-clear-composed" aria-label="Clear composed message" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition" data-i18n="clearText">
+                  Clear
+                </button>
+                <button id="btn-speak-composed" aria-label="Speak entire composed sentence out loud" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                  <span>Speak Entire Sentence</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- GESTURE SIMULATOR / TEST SANDBOX (For low lighting, judge testing, or devices without camera) -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <span>⚡</span> <span data-i18n="gestureSimulator">Gesture Simulator & Quick Test Sandbox</span>
+            </h3>
+            <p class="text-xs text-slate-400" data-i18n="simulatorHelp">
+              Camera not available? Click any gesture below to simulate recognition:
+            </p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded bg-slate-800 text-cyan-400 font-mono">10 Predefined Signs</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 pt-2">
+          <button onclick="window.gestureRecognizer.simulateGesture('HELP')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-red-600/20 hover:border-red-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">🆘</span>
+            <div>
+              <div class="text-xs font-bold text-white">HELP</div>
+              <div class="text-[10px] text-slate-400">Emergency</div>
+            </div>
+          </button>
+
+          <button onclick="window.gestureRecognizer.simulateGesture('DOCTOR')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-emerald-600/20 hover:border-emerald-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">👨‍⚕️</span>
+            <div>
+              <div class="text-xs font-bold text-white">DOCTOR</div>
+              <div class="text-[10px] text-slate-400">Medical Need</div>
+            </div>
+          </button>
+
+          <button onclick="window.gestureRecognizer.simulateGesture('WATER')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-cyan-600/20 hover:border-cyan-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">💧</span>
+            <div>
+              <div class="text-xs font-bold text-white">WATER</div>
+              <div class="text-[10px] text-slate-400">Thirsty / Drink</div>
+            </div>
+          </button>
+
+          <button onclick="window.gestureRecognizer.simulateGesture('POLICE')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 hover:border-blue-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">🚓</span>
+            <div>
+              <div class="text-xs font-bold text-white">POLICE</div>
+              <div class="text-[10px] text-slate-400">Security</div>
+            </div>
+          </button>
+
+          <button onclick="window.gestureRecognizer.simulateGesture('PAIN')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-rose-600/20 hover:border-rose-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">⚡</span>
+            <div>
+              <div class="text-xs font-bold text-white">PAIN</div>
+              <div class="text-[10px] text-slate-400">I am Hurt</div>
+            </div>
+          </button>
+
+          <button onclick="window.gestureRecognizer.simulateGesture('YES')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-emerald-600/20 hover:border-emerald-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">👍</span>
+            <div>
+              <div class="text-xs font-bold text-white">YES</div>
+              <div class="text-[10px] text-slate-400">Agree</div>
+            </div>
+          </button>
+
+          <button onclick="window.gestureRecognizer.simulateGesture('NO')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-red-600/20 hover:border-red-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">☝️</span>
+            <div>
+              <div class="text-xs font-bold text-white">NO</div>
+              <div class="text-[10px] text-slate-400">Disagree</div>
+            </div>
+          </button>
+
+          <button onclick="window.gestureRecognizer.simulateGesture('THANK_YOU')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-indigo-600/20 hover:border-indigo-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">🙏</span>
+            <div>
+              <div class="text-xs font-bold text-white">THANK YOU</div>
+              <div class="text-[10px] text-slate-400">Gratitude</div>
+            </div>
+          </button>
+
+          <button onclick="window.gestureRecognizer.simulateGesture('FOOD')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-amber-600/20 hover:border-amber-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">🍲</span>
+            <div>
+              <div class="text-xs font-bold text-white">FOOD</div>
+              <div class="text-[10px] text-slate-400">Hungry</div>
+            </div>
+          </button>
+
+          <button onclick="window.gestureRecognizer.simulateGesture('OK')" class="p-3 rounded-xl bg-slate-800/80 hover:bg-sky-600/20 hover:border-sky-500 border border-slate-700/60 text-left transition flex items-center gap-2.5">
+            <span class="text-2xl">👌</span>
+            <div>
+              <div class="text-xs font-bold text-white">OK / FINE</div>
+              <div class="text-[10px] text-slate-400">All Good</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 2: TWO-WAY SPEECH & TEXT COMMUNICATION -->
+    <section id="tab-two-way" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-two-way" class="tab-panel hidden space-y-6" style="display: none;">
+      
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2" data-i18n="twoWayTitle">
+            Two-Way Assistive Communication Hub
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300 mt-1" data-i18n="twoWayDesc">
+            Bridges the gap between Deaf individuals and hearing people using Speech-to-Text and Text-to-Speech.
+          </p>
+        </div>
+
+        <!-- Hearing Person Mic Trigger -->
+        <div class="flex items-center gap-3">
+          <div id="mic-listening-wave" class="hidden flex items-center gap-1 px-3" aria-hidden="true">
+            <span class="sound-wave-bar"></span>
+            <span class="sound-wave-bar"></span>
+            <span class="sound-wave-bar"></span>
+            <span class="sound-wave-bar"></span>
+            <span class="sound-wave-bar"></span>
+          </div>
+
+          <button id="btn-mic-toggle" aria-label="Toggle Microphone for Hearing Person Speech Recognition" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-3 rounded-xl shadow-lg transition flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+            <span data-i18n="startListening">Start Microphone</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Real-Time Speech Banner for Hearing Person -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex items-center gap-4">
+        <span class="text-2xl flex-shrink-0" aria-hidden="true">🗣️</span>
+        <div class="flex-1">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400" data-i18n="hearingPersonSpeaks">Hearing Person (Tap & Speak)</div>
+          <div id="spoken-live-text" class="text-base sm:text-lg text-slate-200 font-medium italic mt-0.5" aria-live="polite" data-i18n="spokenTextPlaceholder">
+            Spoken words will appear here in real-time...
+          </div>
+        </div>
+      </div>
+
+      <!-- Matching Sign Visual Card Preview (When speech mentions a keyword) -->
+      <div id="detected-speech-sign-preview" class="hidden" aria-live="polite"></div>
+
+      <!-- Two-Way Live Chat Stream -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-5 shadow-2xl flex flex-col h-[460px]">
+        
+        <!-- Messages Scroll Area -->
+        <div id="two-way-messages-list" role="log" aria-live="polite" aria-label="Conversation Messages Stream" class="flex-1 overflow-y-auto pr-2 space-y-3">
+          <div class="text-center py-6 text-slate-400 text-xs">
+            Conversation started. Use the microphone above or the text box below to interact.
+          </div>
+        </div>
+
+        <!-- Quick Response Chips for Deaf Person -->
+        <div class="pt-3 border-t border-slate-800/80 mb-3 flex items-center gap-2 overflow-x-auto no-scrollbar" role="group" aria-label="Quick response suggestions">
+          <span class="text-xs text-slate-400 font-semibold flex-shrink-0" data-i18n="quickResponses">Quick:</span>
+          <button data-quick-reply="Yes, I understand." aria-label="Quick reply: Yes, I understand" class="text-xs px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex-shrink-0 transition">👍 Yes, I understand</button>
+          <button data-quick-reply="No, please write it down." aria-label="Quick reply: No, please write it down" class="text-xs px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex-shrink-0 transition">✍️ Write it down</button>
+          <button data-quick-reply="I need a doctor." aria-label="Quick reply: I need a doctor" class="text-xs px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex-shrink-0 transition">👨‍⚕️ Need doctor</button>
+          <button data-quick-reply="Where is the exit?" aria-label="Quick reply: Where is the exit" class="text-xs px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex-shrink-0 transition">🚪 Where is exit?</button>
+          <button data-quick-reply="Thank you so much!" aria-label="Quick reply: Thank you so much" class="text-xs px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex-shrink-0 transition">🙏 Thank you</button>
+        </div>
+
+        <!-- Deaf Person Reply Input Bar -->
+        <div class="flex items-center gap-3">
+          <label for="deaf-reply-input" class="sr-only">Type message</label>
+          <input type="text" id="deaf-reply-input" aria-label="Type your message to speak aloud" class="flex-1 bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-blue-500 font-medium" placeholder="Type your reply or use detected signs... (Press Enter to Send & Speak)">
+          
+          <button id="btn-deaf-send" aria-label="Send message and speak out loud" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg transition">
+            <span data-i18n="sendAndSpeak">Send & Speak</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 3: VISUAL SIGN GUIDE & INTERACTIVE DICTIONARY -->
+    <section id="tab-visual-guide" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-visual-guide" class="tab-panel hidden space-y-6" style="display: none;">
+      
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2" data-i18n="visualGuideTitle">
+            Visual Sign Language Guidance & Dictionary
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300 mt-1" data-i18n="visualGuideDesc">
+            Verified Indian Sign Language (ISL) animations, illustrations and step-by-step hand guides.
+          </p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="w-full md:w-80">
+          <label for="search-signs-input" class="sr-only">Search signs</label>
+          <input type="text" id="search-signs-input" aria-label="Search signs by keyword" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="Search signs (e.g. Doctor, Water, Help)...">
+        </div>
+      </div>
+
+      <!-- Categories Filter Tabs -->
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" role="tablist" aria-label="Sign dictionary categories">
+        <button data-sign-category="all" role="tab" aria-selected="true" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition active bg-blue-600 text-white" data-i18n="categoryAll">
+          All Signs
+        </button>
+        <button data-sign-category="emergency" role="tab" aria-selected="false" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition bg-slate-800 text-slate-300 hover:text-white" data-i18n="categoryEmergency">
+          Emergency
+        </button>
+        <button data-sign-category="medical" role="tab" aria-selected="false" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition bg-slate-800 text-slate-300 hover:text-white" data-i18n="categoryMedical">
+          Medical & Health
+        </button>
+        <button data-sign-category="daily" role="tab" aria-selected="false" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition bg-slate-800 text-slate-300 hover:text-white" data-i18n="categoryDaily">
+          Daily & Social
+        </button>
+        <button data-sign-category="education" role="tab" aria-selected="false" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition bg-slate-800 text-slate-300 hover:text-white" data-i18n="categoryEducation">
+          College & Learning
+        </button>
+      </div>
+
+      <!-- Dynamic Cards Grid -->
+      <div id="visual-signs-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" aria-label="Sign guide results">
+        <!-- Rendered by visual-signs.js -->
+      </div>
+
+    </section>
+
+    <!-- TAB 4: EMERGENCY SOS & LOCATION DISPATCH -->
+    <section id="tab-emergency" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-emergency" class="tab-panel hidden space-y-6" style="display: none;">
+      
+      <!-- Top Emergency Header -->
+      <div class="bg-gradient-to-r from-red-950/80 via-slate-900 to-slate-900 border-2 border-red-800/60 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="w-3 h-3 rounded-full bg-red-500 animate-ping" aria-hidden="true"></span>
+            <span class="text-xs font-extrabold uppercase tracking-widest text-red-400">Emergency Protocol Active</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight" data-i18n="sosTitle">
+            Emergency Communication Mode (SOS)
+          </h2>
+          <p class="text-sm text-slate-300 mt-1 max-w-2xl" data-i18n="sosSubtitle">
+            Immediate assistance without spoken words. Instant GPS sharing & alerts for deaf individuals in distress.
+          </p>
+        </div>
+
+        <!-- GPS Status Badge -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col gap-1 text-right">
+          <div class="flex items-center justify-end">
+            <div id="gps-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30" aria-live="polite">
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping" aria-hidden="true"></span> Locating...
+            </div>
+          </div>
+          <div id="gps-coordinates-text" class="text-xs text-slate-300 font-mono mt-1" aria-live="polite">
+            Acquiring GPS satellite position...
+          </div>
+        </div>
+      </div>
+
+      <!-- Big One-Touch Emergency SOS Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" role="group" aria-label="Emergency alert options">
+        
+        <!-- 1. Medical -->
+        <button onclick="window.emergencyManager.triggerEmergency('medical')" aria-label="Trigger Medical Emergency Alert" class="group p-6 rounded-3xl bg-gradient-to-b from-red-950/60 to-slate-900 border-2 border-red-700/50 hover:border-red-500 text-left transition transform hover:-translate-y-1 shadow-xl flex flex-col justify-between">
+          <div>
+            <div class="w-16 h-16 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-4xl mb-4 group-hover:scale-110 transition" aria-hidden="true">
+              🚑
+            </div>
+            <h3 class="text-xl font-extrabold text-white mb-2" data-i18n="medicalHelp">Medical Emergency</h3>
+            <p class="text-xs text-slate-300 leading-relaxed" data-i18n="medicalHelpDesc">
+              I have a severe medical problem. Need doctor / ambulance immediately.
+            </p>
+          </div>
+          <div class="mt-6 pt-3 border-t border-red-900/50 flex items-center justify-between text-xs font-bold text-red-400">
+            <span>TRIGGER ALERT</span>
+            <span aria-hidden="true">➔</span>
+          </div>
+        </button>
+
+        <!-- 2. Police -->
+        <button onclick="window.emergencyManager.triggerEmergency('police')" aria-label="Trigger Police Assistance Emergency Alert" class="group p-6 rounded-3xl bg-gradient-to-b from-blue-950/60 to-slate-900 border-2 border-blue-700/50 hover:border-blue-500 text-left transition transform hover:-translate-y-1 shadow-xl flex flex-col justify-between">
+          <div>
+            <div class="w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-4xl mb-4 group-hover:scale-110 transition" aria-hidden="true">
+              🚓
+            </div>
+            <h3 class="text-xl font-extrabold text-white mb-2" data-i18n="policeHelp">Police Assistance</h3>
+            <p class="text-xs text-slate-300 leading-relaxed" data-i18n="policeHelpDesc">
+              I am in danger or crime occurred. Please call the police now.
+            </p>
+          </div>
+          <div class="mt-6 pt-3 border-t border-blue-900/50 flex items-center justify-between text-xs font-bold text-blue-400">
+            <span>TRIGGER ALERT</span>
+            <span aria-hidden="true">➔</span>
+          </div>
+        </button>
+
+        <!-- 3. Danger / Fire -->
+        <button onclick="window.emergencyManager.triggerEmergency('danger')" aria-label="Trigger Accident and Danger Emergency Alert" class="group p-6 rounded-3xl bg-gradient-to-b from-amber-950/60 to-slate-900 border-2 border-amber-700/50 hover:border-amber-500 text-left transition transform hover:-translate-y-1 shadow-xl flex flex-col justify-between">
+          <div>
+            <div class="w-16 h-16 rounded-2xl bg-amber-600/20 border border-amber-500/40 flex items-center justify-center text-4xl mb-4 group-hover:scale-110 transition" aria-hidden="true">
+              ⚠️
+            </div>
+            <h3 class="text-xl font-extrabold text-white mb-2" data-i18n="dangerHelp">Accident / Danger</h3>
+            <p class="text-xs text-slate-300 leading-relaxed" data-i18n="dangerHelpDesc">
+              Accident or fire hazard! Urgent rescue needed.
+            </p>
+          </div>
+          <div class="mt-6 pt-3 border-t border-amber-900/50 flex items-center justify-between text-xs font-bold text-amber-400">
+            <span>TRIGGER ALERT</span>
+            <span aria-hidden="true">➔</span>
+          </div>
+        </button>
+
+        <!-- 4. General Help -->
+        <button onclick="window.emergencyManager.triggerEmergency('general')" aria-label="Trigger General Emergency Assistance Alert" class="group p-6 rounded-3xl bg-gradient-to-b from-purple-950/60 to-slate-900 border-2 border-purple-700/50 hover:border-purple-500 text-left transition transform hover:-translate-y-1 shadow-xl flex flex-col justify-between">
+          <div>
+            <div class="w-16 h-16 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-4xl mb-4 group-hover:scale-110 transition" aria-hidden="true">
+              🆘
+            </div>
+            <h3 class="text-xl font-extrabold text-white mb-2" data-i18n="generalHelp">I Need Help</h3>
+            <p class="text-xs text-slate-300 leading-relaxed" data-i18n="generalHelpDesc">
+              I am speech/hearing impaired. I need immediate local assistance.
+            </p>
+          </div>
+          <div class="mt-6 pt-3 border-t border-purple-900/50 flex items-center justify-between text-xs font-bold text-purple-400">
+            <span>TRIGGER ALERT</span>
+            <span aria-hidden="true">➔</span>
+          </div>
+        </button>
+
+      </div>
+
+      <!-- Emergency Contacts & Caregiver Manager -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-4">
+        
+        <!-- Contact List (7 cols) -->
+        <div class="lg:col-span-7 bg-slate-900/70 border border-slate-800 rounded-3xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2" data-i18n="contactsTitle">
+              <span aria-hidden="true">👥</span> Trusted Emergency Contacts & Caregivers
+            </h3>
+            <span class="text-xs text-slate-400">One-tap WhatsApp & SMS alert</span>
+          </div>
+
+          <div id="emergency-contacts-list" class="space-y-3" aria-label="Saved Emergency Contacts">
+            <!-- Rendered by contacts.js -->
+          </div>
+        </div>
+
+        <!-- Add Contact Form (5 cols) -->
+        <div class="lg:col-span-5 bg-slate-900/70 border border-slate-800 rounded-3xl p-6">
+          <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2" data-i18n="addContact">
+            <span aria-hidden="true">➕</span> Add Emergency Contact
+          </h3>
+
+          <form id="add-contact-form" class="space-y-4">
+            <div>
+              <label for="new-contact-name" class="block text-xs font-semibold text-slate-300 mb-1" data-i18n="contactName">Contact Name</label>
+              <input type="text" id="new-contact-name" required aria-required="true" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="e.g. Dr. Rajesh / Sister Priya">
+            </div>
+
+            <div>
+              <label for="new-contact-phone" class="block text-xs font-semibold text-slate-300 mb-1" data-i18n="contactPhone">Phone Number (with Country Code)</label>
+              <input type="tel" id="new-contact-phone" required aria-required="true" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="e.g. +91 9876543210">
+            </div>
+
+            <div>
+              <label for="new-contact-relation" class="block text-xs font-semibold text-slate-300 mb-1">Relationship</label>
+              <input type="text" id="new-contact-relation" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="e.g. Family, Doctor, Caregiver">
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-lg" data-i18n="saveContact">
+              Save Contact
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 5: SECTOR SCENARIOS -->
+    <section id="tab-scenarios" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-scenarios" class="tab-panel hidden space-y-6" style="display: none;">
+      
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2" data-i18n="scenariosTitle">
+            Everyday Public Scenarios & Quick Cards
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300 mt-1" data-i18n="scenariosSubtitle">
+            Pre-crafted communication cards for hospitals, police stations, colleges, and public offices.
+          </p>
+        </div>
+      </div>
+
+      <!-- Sector Selector Tabs -->
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" role="tablist" aria-label="Sector categories">
+        <button data-scenario-sector="hospital" role="tab" aria-selected="true" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition bg-blue-600 text-white flex items-center gap-2" data-i18n="hospitalTab">
+          <span aria-hidden="true">🏥</span> <span>Hospital & Clinic</span>
+        </button>
+        <button data-scenario-sector="police" role="tab" aria-selected="false" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition bg-slate-800 text-slate-300 hover:text-white flex items-center gap-2" data-i18n="policeTab">
+          <span aria-hidden="true">🚓</span> <span>Police & Safety</span>
+        </button>
+        <button data-scenario-sector="college" role="tab" aria-selected="false" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition bg-slate-800 text-slate-300 hover:text-white flex items-center gap-2" data-i18n="collegeTab">
+          <span aria-hidden="true">🎓</span> <span>College / HIT</span>
+        </button>
+        <button data-scenario-sector="publicOffice" role="tab" aria-selected="false" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition bg-slate-800 text-slate-300 hover:text-white flex items-center gap-2" data-i18n="publicOfficeTab">
+          <span aria-hidden="true">🏛️</span> <span>Public Office</span>
+        </button>
+      </div>
+
+      <!-- Sector Cards Grid -->
+      <div id="scenarios-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" aria-label="Scenario phrases">
+        <!-- Rendered by app.js -->
+      </div>
+
+    </section>
+
+    <!-- TAB 6: HACKATHON & PROJECT INFO -->
+    <section id="tab-team" role="tabpanel" tabindex="0" aria-labelledby="tab-btn-team" class="tab-panel hidden space-y-6" style="display: none;">
+      
+      <!-- Hackathon Pitch Banner -->
+      <div class="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-700/50 rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/40 text-blue-400 text-xs font-bold tracking-wider uppercase">
+            SEVA HACKATHON 2026 • OFFICIAL SUBMISSION
+          </div>
+          <span class="text-xs px-3 py-1 rounded bg-slate-800 text-emerald-400 font-mono font-semibold">Track: Product / Technology</span>
+        </div>
+
+        <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight mb-3">
+          SIGNSEVA – Assistive AI Communication System
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base leading-relaxed max-w-4xl">
+          Bridging the communication barrier for deaf and speech-impaired citizens across India through browser-native computer vision, Indian Sign Language visual guidance, and two-way assistive speech translation.
+        </p>
+      </div>
+
+      <!-- Team & Submission Details Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Team Card -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-xl">
+          <div class="text-2xl mb-2">👥</div>
+          <h3 class="text-lg font-bold text-white mb-1">Team CodeCure</h3>
+          <p class="text-xs text-blue-400 font-medium mb-4">Hindusthan Institute of Technology (B.E CSE II B)</p>
+
+          <div class="space-y-3 border-t border-slate-800 pt-3 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-semibold">Team Leader:</span>
+              <span class="text-white font-medium">Mohammed Thoufiq S</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-semibold">Member 2:</span>
+              <span class="text-white font-medium">Nandhini Priya D</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-semibold">Member 3:</span>
+              <span class="text-white font-medium">Mohamed Meera J</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-semibold">Faculty Mentor:</span>
+              <span class="text-cyan-400 font-medium">UdhayaKumar</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-semibold">Contact:</span>
+              <span class="text-slate-300 font-mono">9698860002</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget & Cost Breakdown -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-xl">
+          <div class="text-2xl mb-2">💰</div>
+          <h3 class="text-lg font-bold text-white mb-1">Cost & Budget Model</h3>
+          <p class="text-xs text-emerald-400 font-medium mb-4">Estimated Total: ₹45,000 (Affordable & Open-Source)</p>
+
+          <div class="space-y-2 border-t border-slate-800 pt-3 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">AI Model & Gesture CV:</span>
+              <span class="text-white font-mono">₹12,000</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">Application Development:</span>
+              <span class="text-white font-mono">₹12,000</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">Dataset & Testing:</span>
+              <span class="text-white font-mono">₹6,000</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">Backend & Emergency Hosting:</span>
+              <span class="text-white font-mono">₹5,000</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">Accessibility Improvements:</span>
+              <span class="text-white font-mono">₹5,000</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">Contingency:</span>
+              <span class="text-white font-mono">₹5,000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Innovation & Impact -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-xl">
+          <div class="text-2xl mb-2">💡</div>
+          <h3 class="text-lg font-bold text-white mb-1">Innovation & Impact</h3>
+          <p class="text-xs text-purple-400 font-medium mb-4">Swasth & Samavesh Bharat Theme</p>
+
+          <ul class="space-y-2.5 border-t border-slate-800 pt-3 text-xs text-slate-300">
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-400">✓</span>
+              <span><strong>Hardware-Free:</strong> Runs on ordinary smartphones & laptops without costly sensor gloves.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-400">✓</span>
+              <span><strong>Two-Way Bridge:</strong> Sign-to-Speech + Speech-to-Text + Visual Sign Guidance.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-400">✓</span>
+              <span><strong>Life-Saving SOS:</strong> Live GPS location broadcast to WhatsApp & SMS in one click.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-emerald-400">✓</span>
+              <span><strong>Multilingual:</strong> English, Hindi & Tamil interfaces and speech synthesis.</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Step-by-Step Architecture Pipeline Diagram -->
+      <div class="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 shadow-xl">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <span>🔄</span> Technical Architecture & Data Workflow
+        </h3>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-center">
+          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+            <div class="text-2xl mb-1">📹</div>
+            <div class="font-bold text-xs text-blue-400">1. Video Input</div>
+            <div class="text-[11px] text-slate-400 mt-1">Webcam / Mobile Camera frame capture via HTML5 MediaStream</div>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+            <div class="text-2xl mb-1">🖐️</div>
+            <div class="font-bold text-xs text-cyan-400">2. Landmark Tracking</div>
+            <div class="text-[11px] text-slate-400 mt-1">Google MediaPipe Hands extracts 21 3D joint landmark coordinates</div>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+            <div class="text-2xl mb-1">🧠</div>
+            <div class="font-bold text-xs text-indigo-400">3. AI Classifier</div>
+            <div class="text-[11px] text-slate-400 mt-1">Geometric angles & finger state heuristic + ML model match</div>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+            <div class="text-2xl mb-1">🗣️</div>
+            <div class="font-bold text-xs text-emerald-400">4. Speech / Text</div>
+            <div class="text-[11px] text-slate-400 mt-1">Web Speech API synthesizes voice in English, Hindi, or Tamil</div>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+            <div class="text-2xl mb-1">🚨</div>
+            <div class="font-bold text-xs text-red-400">5. Emergency Dispatch</div>
+            <div class="text-[11px] text-slate-400 mt-1">GPS Geolocation pin dispatched to WhatsApp, SMS & Siren</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 border-t border-slate-800 py-6 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-300">SIGNSEVA</span>
+        <span>•</span>
+        <span>SEVA Hackathon 2026</span>
+        <span>•</span>
+        <span>Hindusthan Institute of Technology</span>
+      </div>
+      <div>
+        Created with ❤️ by <span class="text-slate-300 font-semibold">Team CodeCure</span> (Mohammed Thoufiq S, Nandhini Priya D, Mohamed Meera J)
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/i18n.js"></script>
+  <script src="js/speech-assistant.js"></script>
+  <script src="js/gesture-recognition.js"></script>
+  <script src="js/visual-signs.js"></script>
+  <script src="js/emergency.js"></script>
+  <script src="js/contacts.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration note:', err));
+    }
+  </script>
+</body>
+</html>

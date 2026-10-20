@@ -1,0 +1,16 @@
+{
+  "name": "SIGNSEVA - Assistive AI Communication System",
+  "short_name": "SIGNSEVA",
+  "description": "AI-Powered Sign Language Recognition & Two-Way Assistive Communication for Swasth & Samavesh Bharat",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563eb'/><text x='50' y='65' font-size='50' font-family='sans-serif' text-anchor='middle' fill='white'>🤟</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
